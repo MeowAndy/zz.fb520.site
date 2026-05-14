@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>赞助菲比 Bot｜鸣潮机器人</title>
+  <link rel="icon" type="image/jpeg" href="assets/phoebe-avatar.jpg">
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        fontFamily: { sans: ['Quicksand', 'PingFang SC', 'Microsoft YaHei UI', 'sans-serif'] },
+        extend: {
+          colors: { gold: '#FFC107', tide: '#4FC3F7' }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background: linear-gradient(135deg, #ffffff 0%, #fff9e6 45%, #e0f7fa 100%);
+      background-attachment: fixed;
+      min-height: 100vh;
+    }
+    .bg-phoebe {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      background: url('assets/bg-phoebe.jpg') center/cover no-repeat;
+      filter: blur(20px) brightness(1.05) saturate(1.2);
+      opacity: 0.25;
+    }
+    .glass {
+      background: rgba(255,255,255,0.75);
+      border: 1px solid rgba(255,255,255,0.5);
+      box-shadow: 0 8px 32px rgba(255,215,0,0.1);
+      backdrop-filter: blur(12px);
+      border-radius: 24px;
+    }
+    .qr-card {
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .qr-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(255,179,0,0.2);
+    }
+    .tab-btn.active {
+      background: linear-gradient(90deg, #FFC107, #FFB300);
+      color: #fff;
+      box-shadow: 0 4px 15px rgba(255,179,0,0.3);
+    }
+  </style>
+</head>
+<body class="text-slate-700 font-sans">
+  <div class="bg-phoebe"></div>
+
+  <div class="min-h-screen flex flex-col items-center justify-center px-4 py-10">
+    <!-- 头部 -->
+    <div class="flex items-center gap-3 mb-2">
+      <img src="assets/phoebe-avatar.jpg" alt="菲比" class="w-14 h-14 rounded-full shadow-lg border-3 border-amber-200">
+      <div>
+        <h1 class="text-2xl md:text-3xl font-black text-slate-800">赞助菲比 Bot</h1>
+        <p class="text-sm text-amber-500 font-bold">鸣潮免费分享机器人 · 公益运行</p>
+      </div>
+    </div>
+    <p class="text-slate-500 text-sm mb-8 text-center max-w-md">菲比 Bot 一直坚持免费公益运行，如果你觉得菲比帮到了你，可以请菲比喝杯奶茶 ☕ 感谢每一位支持者的温暖~</p>
+
+    <!-- 支付切换 -->
+    <div class="flex gap-3 mb-6">
+      <button class="tab-btn active px-5 py-2.5 rounded-full font-bold text-sm transition" onclick="showTab('wechat')">💚 微信</button>
+      <button class="tab-btn px-5 py-2.5 rounded-full font-bold text-sm bg-white/60 border border-amber-100 transition" onclick="showTab('alipay')">💙 支付宝</button>
+      <button class="tab-btn px-5 py-2.5 rounded-full font-bold text-sm bg-white/60 border border-amber-100 transition" onclick="showTab('qq')">💜 QQ</button>
+    </div>
+
+    <!-- 二维码卡片 -->
+    <div class="glass qr-card p-6 md:p-8 max-w-sm w-full text-center">
+      <div id="qr-wechat" class="qr-panel">
+        <p class="text-lg font-black text-green-600 mb-4">微信支付</p>
+        <img src="assets/wechat.jpg" alt="微信支付二维码" class="w-full rounded-2xl shadow-md">
+      </div>
+      <div id="qr-alipay" class="qr-panel hidden">
+        <p class="text-lg font-black text-blue-600 mb-4">支付宝</p>
+        <img src="assets/alipay.jpg" alt="支付宝二维码" class="w-full rounded-2xl shadow-md">
+      </div>
+      <div id="qr-qq" class="qr-panel hidden">
+        <p class="text-lg font-black text-purple-600 mb-4">QQ 支付</p>
+        <img src="assets/qq.jpg" alt="QQ支付二维码" class="w-full rounded-2xl shadow-md">
+      </div>
+      <p class="mt-5 text-xs text-slate-400">长按或扫描二维码即可赞助 · 金额随意</p>
+    </div>
+
+    <!-- 底部 -->
+    <p class="mt-8 text-xs text-slate-400 text-center">菲比 Bot · 鸣潮免费分享机器人 · 感谢你的支持 💛</p>
+  </div>
+
+  <script>
+    function showTab(name) {
+      document.querySelectorAll('.qr-panel').forEach(el => el.classList.add('hidden'));
+      document.getElementById('qr-' + name).classList.remove('hidden');
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+        btn.classList.add('bg-white/60', 'border', 'border-amber-100');
+      });
+      event.target.classList.add('active');
+      event.target.classList.remove('bg-white/60', 'border', 'border-amber-100');
+    }
+  </script>
+</body>
+</html>
