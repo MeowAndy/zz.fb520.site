@@ -61,6 +61,40 @@
       <span id="add-msg" class="ml-3 text-sm text-green-600 hidden">✓ 已添加</span>
     </div>
 
+    
+    <!-- 财务管理 -->
+    <div class="glass p-6 max-w-lg w-full mb-6">
+      <h2 class="font-bold text-lg text-slate-700 mb-4">💰 财务管理</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- 输入区 -->
+        <div class="space-y-3">
+          <div>
+            <label class="text-xs text-slate-500 mb-1 block">总收入 (¥)</label>
+            <input id="fin-income-input" type="number" step="0.01" placeholder="总收入" oninput="liveCalc()" class="w-full px-4 py-2.5 rounded-xl border border-green-200 focus:outline-none focus:ring-2 focus:ring-green-300 bg-green-50/50">
+          </div>
+          <div>
+            <label class="text-xs text-slate-500 mb-1 block">总支出 (¥)</label>
+            <input id="fin-expense-input" type="number" step="0.01" placeholder="总支出" oninput="liveCalc()" class="w-full px-4 py-2.5 rounded-xl border border-red-200 focus:outline-none focus:ring-2 focus:ring-red-300 bg-red-50/50">
+          </div>
+          <div class="flex items-center gap-3">
+            <button onclick="saveFinance()" class="px-5 py-2 rounded-xl font-bold text-white bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 transition shadow-md text-sm">保存</button>
+            <span id="fin-msg" class="text-sm text-green-600 hidden">✓ 已保存</span>
+          </div>
+        </div>
+        <!-- 实时预览区 -->
+        <div class="bg-white/70 rounded-2xl p-4 border border-amber-100 flex flex-col justify-center items-center text-center">
+          <p class="text-xs text-slate-400 mb-2">📊 实时预览</p>
+          <div class="space-y-1.5 w-full">
+            <div class="flex justify-between text-sm"><span class="text-slate-500">收入</span><span id="live-income" class="font-bold text-green-600">¥0</span></div>
+            <div class="flex justify-between text-sm"><span class="text-slate-500">支出</span><span id="live-expense" class="font-bold text-red-500">¥0</span></div>
+            <hr class="border-amber-100 my-1">
+            <div class="flex justify-between text-sm"><span class="text-slate-500">盈亏</span><span id="live-balance" class="font-bold">¥0</span></div>
+          </div>
+          <p id="live-status" class="mt-2 text-xs font-bold px-3 py-1 rounded-full">-</p>
+        </div>
+      </div>
+    </div>
+
     <!-- List -->
     <div class="glass p-6 max-w-lg w-full">
       <h2 class="font-bold text-lg text-slate-700 mb-4">📋 当前赞助名单</h2>
@@ -101,6 +135,7 @@
           });
         }
         loadSponsors();
+        loadFinance();
       });
     }
 
@@ -122,7 +157,10 @@
               ${s.amount ? `<span class="ml-2 text-amber-500 font-bold">${escHtml(s.amount)}</span>` : ''}
               ${s.date ? `<span class="ml-2 text-slate-400 text-xs">${escHtml(s.date)}</span>` : ''}
             </div>
-            <button onclick="delSponsor('${s.id}')" class="text-red-400 hover:text-red-600 font-bold text-sm px-2 py-1 rounded-lg hover:bg-red-50 transition">删除</button>
+            <div class="flex gap-1">
+              <button onclick="editSponsor('${s.id}','${escHtml(s.name)}','${escHtml(s.amount || '')}')" class="text-blue-400 hover:text-blue-600 font-bold text-sm px-2 py-1 rounded-lg hover:bg-blue-50 transition">编辑</button>
+              <button onclick="delSponsor('${s.id}')" class="text-red-400 hover:text-red-600 font-bold text-sm px-2 py-1 rounded-lg hover:bg-red-50 transition">删除</button>
+            </div>
           </div>
         `).join('');
       });
@@ -146,6 +184,8 @@
           msg.classList.remove('hidden');
           setTimeout(() => msg.classList.add('hidden'), 2000);
           loadSponsors();
+          loadFinance();
+        
         }
       });
     }
@@ -156,7 +196,7 @@
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPwd },
         body: JSON.stringify({})
-      }).then(() => loadSponsors());
+      }).then(() => { loadSponsors(); loadFinance(); });
     }
 
     function escHtml(s) {
@@ -164,6 +204,76 @@
       d.textContent = s;
       return d.innerHTML;
     }
+
+    function liveCalc() {
+      const income = parseFloat(document.getElementById('fin-income-input').value) || 0;
+      const expense = parseFloat(document.getElementById('fin-expense-input').value) || 0;
+      const balance = income - expense;
+      document.getElementById('live-income').textContent = '¥' + income.toFixed(2);
+      document.getElementById('live-expense').textContent = '¥' + expense.toFixed(2);
+      const balEl = document.getElementById('live-balance');
+      const statusEl = document.getElementById('live-status');
+      if (balance >= 0) {
+        balEl.textContent = '+¥' + balance.toFixed(2);
+        balEl.className = 'font-bold text-green-600';
+        statusEl.textContent = '盈利';
+        statusEl.className = 'mt-2 text-xs font-bold px-3 py-1 rounded-full bg-green-100 text-green-700';
+      } else {
+        balEl.textContent = '-¥' + Math.abs(balance).toFixed(2);
+        balEl.className = 'font-bold text-red-500';
+        statusEl.textContent = '亏损';
+        statusEl.className = 'mt-2 text-xs font-bold px-3 py-1 rounded-full bg-red-100 text-red-600';
+      }
+    }
+
+    function loadFinance() {
+      fetch('/api/finance').then(r => r.json()).then(fin => {
+        document.getElementById('fin-income-input').value = fin.income;
+        document.getElementById('fin-expense-input').value = fin.expense;
+        liveCalc();
+      });
+    }
+
+    function saveFinance() {
+      const income = parseFloat(document.getElementById('fin-income-input').value) || 0;
+      const expense = parseFloat(document.getElementById('fin-expense-input').value) || 0;
+      fetch('/api/finance', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPwd },
+        body: JSON.stringify({ income, expense })
+      }).then(r => r.json()).then(fin => {
+        const msg = document.getElementById('fin-msg');
+        msg.classList.remove('hidden');
+        setTimeout(() => msg.classList.add('hidden'), 2000);
+        liveCalc();
+      });
+    }
+
+
+    function editSponsor(id, name, amount) {
+      const newName = prompt('修改名字（留空不改）:', name);
+      if (newName === null) return;
+      const newAmount = prompt('修改金额:', amount);
+      if (newAmount === null) return;
+      const body = {};
+      if (newName.trim() && newName.trim() !== name) body.name = newName.trim();
+      if (newAmount.trim() !== amount) body.amount = newAmount.trim();
+      if (Object.keys(body).length === 0) return;
+      body.password = adminPwd;
+      fetch('/api/sponsors/' + id, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPwd },
+        body: JSON.stringify(body)
+      }).then(r => {
+        if (r.ok) {
+          loadSponsors();
+          loadFinance();
+        } else {
+          alert('修改失败');
+        }
+      });
+    }
+
   </script>
 </body>
 </html>
