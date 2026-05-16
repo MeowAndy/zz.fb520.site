@@ -1,0 +1,12 @@
+# Data files (contain secrets/runtime data)
+data/
+
+# Deploy scripts
+deploy.sh
+
+# Backups
+*.bak*
+
+# OS
+.DS_Store
+Thumbs.db

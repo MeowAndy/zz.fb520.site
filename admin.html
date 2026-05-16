@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>赞助管理 · 菲比 Bot</title>
+  <title>后台管理 · 赞助菲比</title>
   <link rel="icon" type="image/jpeg" href="assets/phoebe-avatar.jpg">
   <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
@@ -16,264 +16,495 @@
     }
   </script>
   <style>
-    body {
-      background: linear-gradient(135deg, #ffffff 0%, #fff9e6 45%, #e0f7fa 100%);
-      background-attachment: fixed;
-      min-height: 100vh;
-    }
-    .glass {
-      background: rgba(255,255,255,0.75);
-      border: 1px solid rgba(255,255,255,0.5);
-      box-shadow: 0 8px 32px rgba(255,215,0,0.1);
-      backdrop-filter: blur(12px);
-      border-radius: 24px;
-    }
+    body { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); min-height: 100vh; }
+    .glass { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); backdrop-filter: blur(12px); border-radius: 20px; }
+    .glass-light { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); border-radius: 16px; }
+    .btn-gold { background: linear-gradient(90deg, #FFC107, #FFB300); color: #1a1a2e; font-weight: 700; border-radius: 12px; transition: all 0.2s; }
+    .btn-gold:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(255,179,0,0.4); }
+    .btn-red { background: linear-gradient(90deg, #ef4444, #dc2626); color: #fff; font-weight: 600; border-radius: 12px; }
+    .input-dark { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; color: #fff; padding: 10px 14px; width: 100%; }
+    .input-dark:focus { outline: none; border-color: #FFC107; box-shadow: 0 0 0 2px rgba(255,193,7,0.2); }
+    .input-dark::placeholder { color: rgba(255,255,255,0.4); }
+    .tab-nav button { padding: 8px 16px; border-radius: 10px; font-weight: 600; font-size: 0.85rem; transition: all 0.2s; }
+    .tab-nav button.active { background: linear-gradient(90deg, #FFC107, #FFB300); color: #1a1a2e; }
+    .tab-nav button:not(.active) { color: rgba(255,255,255,0.6); }
+    .tab-nav button:not(.active):hover { color: #fff; background: rgba(255,255,255,0.1); }
+    .toast { position: fixed; top: 20px; right: 20px; padding: 12px 20px; border-radius: 12px; color: #fff; font-weight: 600; z-index: 9999; animation: slideIn 0.3s ease; }
+    .toast-success { background: #22c55e; }
+    .toast-error { background: #ef4444; }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
   </style>
 </head>
-<body class="text-slate-700 font-sans">
-  <!-- Login -->
-  <div id="login-panel" class="min-h-screen flex items-center justify-center px-4">
+<body class="text-white font-sans">
+  <!-- Toast container -->
+  <div id="toast-container"></div>
+
+  <!-- Login / Setup Screen -->
+  <div id="auth-screen" class="min-h-screen flex items-center justify-center px-4">
     <div class="glass p-8 max-w-sm w-full text-center">
-      <h1 class="text-2xl font-black text-slate-800 mb-2">🔐 管理入口</h1>
-      <p class="text-sm text-slate-500 mb-6">请输入管理密码</p>
-      <input id="pwd-input" type="password" placeholder="密码" class="w-full px-4 py-3 rounded-xl border border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-300 mb-4">
-      <button onclick="doLogin()" class="w-full py-3 rounded-xl font-bold text-white bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 transition shadow-md">进入管理</button>
-      <p id="login-err" class="text-red-500 text-sm mt-3 hidden">密码错误</p>
+      <h1 class="text-2xl font-black mb-2">🔐 后台管理</h1>
+      <p id="auth-hint" class="text-sm text-white/50 mb-6">请输入管理密码</p>
+      <div id="auth-setup-fields" class="hidden">
+        <input type="password" id="setup-password" class="input-dark mb-3" placeholder="设置新密码（至少6位）">
+        <input type="password" id="setup-confirm" class="input-dark mb-4" placeholder="确认密码">
+        <button onclick="doSetup()" class="btn-gold w-full py-3">设置密码</button>
+      </div>
+      <div id="auth-login-fields">
+        <input type="password" id="login-password" class="input-dark mb-4" placeholder="管理密码" onkeydown="if(event.key==='Enter')doLogin()">
+        <button onclick="doLogin()" class="btn-gold w-full py-3">登录</button>
+      </div>
     </div>
   </div>
 
   <!-- Admin Panel -->
-  <div id="admin-panel" class="hidden min-h-screen flex flex-col items-center px-4 py-10">
-    <div class="flex items-center gap-3 mb-6">
-      <img src="assets/phoebe-avatar.jpg" alt="菲比" class="w-12 h-12 rounded-full shadow-lg border-2 border-amber-200">
-      <h1 class="text-2xl font-black text-slate-800">赞助名单管理</h1>
-    </div>
-
-    <!-- Add form -->
-    <div class="glass p-6 max-w-lg w-full mb-6">
-      <h2 class="font-bold text-lg text-slate-700 mb-4">➕ 添加赞助者</h2>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-        <input id="sp-name" type="text" placeholder="名字 *" class="px-4 py-2.5 rounded-xl border border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-300">
-        <input id="sp-amount" type="text" placeholder="金额（如 ¥50）" class="px-4 py-2.5 rounded-xl border border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-300">
-        <input id="sp-date" type="date" class="px-4 py-2.5 rounded-xl border border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-300">
+  <div id="admin-panel" class="hidden min-h-screen px-4 py-8">
+    <div class="max-w-2xl mx-auto">
+      <!-- Header -->
+      <div class="flex items-center justify-between mb-6">
+        <h1 class="text-xl font-black">✨ 菲比赞助站后台</h1>
+        <button onclick="doLogout()" class="text-sm text-white/50 hover:text-white transition">退出登录</button>
       </div>
-      <button onclick="addSponsor()" class="px-6 py-2.5 rounded-xl font-bold text-white bg-gradient-to-r from-green-400 to-green-500 hover:from-green-500 hover:to-green-600 transition shadow-md">添加</button>
-      <span id="add-msg" class="ml-3 text-sm text-green-600 hidden">✓ 已添加</span>
-    </div>
 
-    
-    <!-- 财务管理 -->
-    <div class="glass p-6 max-w-lg w-full mb-6">
-      <h2 class="font-bold text-lg text-slate-700 mb-4">💰 财务管理</h2>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <!-- 输入区 -->
-        <div class="space-y-3">
-          <div>
-            <label class="text-xs text-slate-500 mb-1 block">总收入 (¥)</label>
-            <input id="fin-income-input" type="number" step="0.01" placeholder="总收入" oninput="liveCalc()" class="w-full px-4 py-2.5 rounded-xl border border-green-200 focus:outline-none focus:ring-2 focus:ring-green-300 bg-green-50/50">
+      <!-- Tab Navigation -->
+      <div class="tab-nav flex flex-wrap gap-2 mb-6">
+        <button class="active" onclick="switchTab('sponsors')">👥 赞助者</button>
+        <button onclick="switchTab('finance')">💰 财务</button>
+        <button onclick="switchTab('qrcodes')">📱 二维码</button>
+        <button onclick="switchTab('site')">🎨 站点设置</button>
+        <button onclick="switchTab('password')">🔑 密码</button>
+      </div>
+
+      <!-- Tab: Sponsors -->
+      <div id="tab-sponsors" class="tab-content">
+        <div class="glass p-6">
+          <h2 class="text-lg font-bold mb-4">添加赞助者</h2>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+            <input type="text" id="sp-name" class="input-dark" placeholder="昵称">
+            <input type="text" id="sp-amount" class="input-dark" placeholder="金额">
+            <input type="text" id="sp-date" class="input-dark" placeholder="日期（可选）">
           </div>
-          <div>
-            <label class="text-xs text-slate-500 mb-1 block">总支出 (¥)</label>
-            <input id="fin-expense-input" type="number" step="0.01" placeholder="总支出" oninput="liveCalc()" class="w-full px-4 py-2.5 rounded-xl border border-red-200 focus:outline-none focus:ring-2 focus:ring-red-300 bg-red-50/50">
-          </div>
-          <div class="flex items-center gap-3">
-            <button onclick="saveFinance()" class="px-5 py-2 rounded-xl font-bold text-white bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 transition shadow-md text-sm">保存</button>
-            <span id="fin-msg" class="text-sm text-green-600 hidden">✓ 已保存</span>
-          </div>
+          <button onclick="addSponsor()" class="btn-gold px-6 py-2.5">添加</button>
         </div>
-        <!-- 实时预览区 -->
-        <div class="bg-white/70 rounded-2xl p-4 border border-amber-100 flex flex-col justify-center items-center text-center">
-          <p class="text-xs text-slate-400 mb-2">📊 实时预览</p>
-          <div class="space-y-1.5 w-full">
-            <div class="flex justify-between text-sm"><span class="text-slate-500">收入</span><span id="live-income" class="font-bold text-green-600">¥0</span></div>
-            <div class="flex justify-between text-sm"><span class="text-slate-500">支出</span><span id="live-expense" class="font-bold text-red-500">¥0</span></div>
-            <hr class="border-amber-100 my-1">
-            <div class="flex justify-between text-sm"><span class="text-slate-500">盈亏</span><span id="live-balance" class="font-bold">¥0</span></div>
-          </div>
-          <p id="live-status" class="mt-2 text-xs font-bold px-3 py-1 rounded-full">-</p>
+        <div class="glass p-6 mt-4">
+          <h2 class="text-lg font-bold mb-4">赞助者列表 (<span id="sp-count">0</span>)</h2>
+          <div id="sponsor-list" class="space-y-2"></div>
         </div>
       </div>
-    </div>
 
-    <!-- List -->
-    <div class="glass p-6 max-w-lg w-full">
-      <h2 class="font-bold text-lg text-slate-700 mb-4">📋 当前赞助名单</h2>
-      <div id="sponsor-list" class="space-y-3">
-        <p class="text-slate-400 text-sm">加载中...</p>
+      <!-- Tab: Finance -->
+      <div id="tab-finance" class="tab-content hidden">
+        <div class="glass p-6">
+          <h2 class="text-lg font-bold mb-4">财务管理</h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label class="text-xs text-white/50 mb-1 block">总收入（自动计算）</label>
+              <input type="number" id="fin-income" class="input-dark" readonly>
+            </div>
+            <div>
+              <label class="text-xs text-white/50 mb-1 block">总支出</label>
+              <input type="number" id="fin-expense" class="input-dark" step="0.01">
+            </div>
+          </div>
+          <div class="glass-light p-4 mb-4">
+            <div class="flex justify-between items-center">
+              <span class="text-white/70">当前盈亏</span>
+              <span id="fin-balance" class="text-lg font-black">-</span>
+            </div>
+          </div>
+          <button onclick="saveFinance()" class="btn-gold px-6 py-2.5">保存支出</button>
+        </div>
+      </div>
+
+      <!-- Tab: QR Codes -->
+      <div id="tab-qrcodes" class="tab-content hidden">
+        <div class="glass p-6">
+          <h2 class="text-lg font-bold mb-4">二维码管理</h2>
+          <p class="text-sm text-white/50 mb-4">上传新的收款二维码图片替换现有的</p>
+          <div class="space-y-4">
+            <div class="glass-light p-4">
+              <div class="flex items-center justify-between mb-2">
+                <span class="font-bold text-green-400">💚 微信支付</span>
+                <label class="btn-gold px-4 py-1.5 text-sm cursor-pointer">
+                  选择图片
+                  <input type="file" accept="image/*" class="hidden" onchange="uploadQR('wechat', this)">
+                </label>
+              </div>
+              <img id="preview-wechat" src="assets/wechat.jpg" class="w-32 h-32 object-cover rounded-xl">
+            </div>
+            <div class="glass-light p-4">
+              <div class="flex items-center justify-between mb-2">
+                <span class="font-bold text-blue-400">💙 支付宝</span>
+                <label class="btn-gold px-4 py-1.5 text-sm cursor-pointer">
+                  选择图片
+                  <input type="file" accept="image/*" class="hidden" onchange="uploadQR('alipay', this)">
+                </label>
+              </div>
+              <img id="preview-alipay" src="assets/alipay.jpg" class="w-32 h-32 object-cover rounded-xl">
+            </div>
+            <div class="glass-light p-4">
+              <div class="flex items-center justify-between mb-2">
+                <span class="font-bold text-purple-400">💜 QQ 支付</span>
+                <label class="btn-gold px-4 py-1.5 text-sm cursor-pointer">
+                  选择图片
+                  <input type="file" accept="image/*" class="hidden" onchange="uploadQR('qq', this)">
+                </label>
+              </div>
+              <img id="preview-qq" src="assets/qq.jpg" class="w-32 h-32 object-cover rounded-xl">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: Site Settings -->
+      <div id="tab-site" class="tab-content hidden">
+        <div class="glass p-6">
+          <h2 class="text-lg font-bold mb-4">站点设置</h2>
+          <div class="space-y-3">
+            <div>
+              <label class="text-xs text-white/50 mb-1 block">标题</label>
+              <input type="text" id="cfg-title" class="input-dark" placeholder="赞助菲比 Bot">
+            </div>
+            <div>
+              <label class="text-xs text-white/50 mb-1 block">副标题</label>
+              <input type="text" id="cfg-subtitle" class="input-dark" placeholder="鸣潮免费分享机器人 · 公益运行">
+            </div>
+            <div>
+              <label class="text-xs text-white/50 mb-1 block">描述</label>
+              <textarea id="cfg-description" class="input-dark" rows="3" placeholder="菲比 Bot 一直坚持免费公益运行..."></textarea>
+            </div>
+            <div>
+              <label class="text-xs text-white/50 mb-1 block">底部文字</label>
+              <input type="text" id="cfg-footer" class="input-dark" placeholder="菲比 Bot · 感谢你的支持 💛">
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="text-xs text-white/50 mb-1 block">头像</label>
+                <div class="flex items-center gap-3">
+                  <img id="cfg-avatar-preview" src="assets/phoebe-avatar.jpg" class="w-12 h-12 rounded-full object-cover">
+                  <label class="btn-gold px-4 py-1.5 text-sm cursor-pointer">
+                    上传
+                    <input type="file" accept="image/*" class="hidden" onchange="uploadImage('avatar', this)">
+                  </label>
+                </div>
+              </div>
+              <div>
+                <label class="text-xs text-white/50 mb-1 block">背景图</label>
+                <div class="flex items-center gap-3">
+                  <img id="cfg-bg-preview" src="assets/bg-phoebe.jpg" class="w-12 h-12 rounded-lg object-cover">
+                  <label class="btn-gold px-4 py-1.5 text-sm cursor-pointer">
+                    上传
+                    <input type="file" accept="image/*" class="hidden" onchange="uploadImage('background', this)">
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+          <button onclick="saveSiteConfig()" class="btn-gold px-6 py-2.5 mt-4">保存设置</button>
+        </div>
+      </div>
+
+      <!-- Tab: Password -->
+      <div id="tab-password" class="tab-content hidden">
+        <div class="glass p-6">
+          <h2 class="text-lg font-bold mb-4">修改密码</h2>
+          <div class="space-y-3">
+            <input type="password" id="pw-new" class="input-dark" placeholder="新密码（至少6位）">
+            <input type="password" id="pw-confirm" class="input-dark" placeholder="确认新密码">
+          </div>
+          <button onclick="changePassword()" class="btn-gold px-6 py-2.5 mt-4">修改密码</button>
+        </div>
       </div>
     </div>
-
-    <a href="/" class="mt-6 text-sm text-amber-500 hover:text-amber-600 font-bold">← 返回赞助页</a>
   </div>
 
   <script>
-    let adminPwd = '';
+    let adminPassword = '';
 
-    function doLogin() {
-      const pwd = document.getElementById('pwd-input').value;
-      fetch('/api/sponsors', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Admin-Password': pwd },
-        body: JSON.stringify({ name: '__auth_test__' })
-      }).then(r => {
-        if (r.status === 401) {
-          document.getElementById('login-err').classList.remove('hidden');
-          return;
-        }
-        // If it succeeded (unlikely with test name), delete it; otherwise just proceed
-        adminPwd = pwd;
-        document.getElementById('login-panel').classList.add('hidden');
-        document.getElementById('admin-panel').classList.remove('hidden');
-        // Delete the test entry if created
-        if (r.status === 201) {
-          r.json().then(data => {
-            fetch('/api/sponsors/' + data.id, {
-              method: 'DELETE',
-              headers: { 'Content-Type': 'application/json', 'X-Admin-Password': pwd },
-              body: JSON.stringify({})
-            });
-          });
-        }
-        loadSponsors();
-        loadFinance();
-      });
+    // --- Toast ---
+    function toast(msg, type = 'success') {
+      const el = document.createElement('div');
+      el.className = `toast toast-${type}`;
+      el.textContent = msg;
+      document.getElementById('toast-container').appendChild(el);
+      setTimeout(() => el.remove(), 3000);
     }
 
-    document.getElementById('pwd-input').addEventListener('keydown', e => {
-      if (e.key === 'Enter') doLogin();
-    });
-
-    function loadSponsors() {
-      fetch('/api/sponsors').then(r => r.json()).then(list => {
-        const container = document.getElementById('sponsor-list');
-        if (!list.length) {
-          container.innerHTML = '<p class="text-slate-400 text-sm">暂无赞助记录</p>';
-          return;
-        }
-        container.innerHTML = list.map(s => `
-          <div class="flex items-center justify-between bg-white/60 rounded-xl px-4 py-3 border border-amber-100">
-            <div>
-              <span class="font-bold text-slate-700">${escHtml(s.name)}</span>
-              ${s.amount ? `<span class="ml-2 text-amber-500 font-bold">${escHtml(s.amount)}</span>` : ''}
-              ${s.date ? `<span class="ml-2 text-slate-400 text-xs">${escHtml(s.date)}</span>` : ''}
-            </div>
-            <div class="flex gap-1">
-              <button onclick="editSponsor('${s.id}','${escHtml(s.name)}','${escHtml(s.amount || '')}')" class="text-blue-400 hover:text-blue-600 font-bold text-sm px-2 py-1 rounded-lg hover:bg-blue-50 transition">编辑</button>
-              <button onclick="delSponsor('${s.id}')" class="text-red-400 hover:text-red-600 font-bold text-sm px-2 py-1 rounded-lg hover:bg-red-50 transition">删除</button>
-            </div>
-          </div>
-        `).join('');
-      });
-    }
-
-    function addSponsor() {
-      const name = document.getElementById('sp-name').value.trim();
-      const amount = document.getElementById('sp-amount').value.trim();
-      const date = document.getElementById('sp-date').value;
-      if (!name) { alert('请输入名字'); return; }
-      fetch('/api/sponsors', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPwd },
-        body: JSON.stringify({ name, amount, date })
-      }).then(r => {
-        if (r.ok) {
-          document.getElementById('sp-name').value = '';
-          document.getElementById('sp-amount').value = '';
-          document.getElementById('sp-date').value = '';
-          const msg = document.getElementById('add-msg');
-          msg.classList.remove('hidden');
-          setTimeout(() => msg.classList.add('hidden'), 2000);
-          loadSponsors();
-          loadFinance();
-        
-        }
-      });
-    }
-
-    function delSponsor(id) {
-      if (!confirm('确定删除？')) return;
-      fetch('/api/sponsors/' + id, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPwd },
-        body: JSON.stringify({})
-      }).then(() => { loadSponsors(); loadFinance(); });
-    }
-
-    function escHtml(s) {
-      const d = document.createElement('div');
-      d.textContent = s;
-      return d.innerHTML;
-    }
-
-    function liveCalc() {
-      const income = parseFloat(document.getElementById('fin-income-input').value) || 0;
-      const expense = parseFloat(document.getElementById('fin-expense-input').value) || 0;
-      const balance = income - expense;
-      document.getElementById('live-income').textContent = '¥' + income.toFixed(2);
-      document.getElementById('live-expense').textContent = '¥' + expense.toFixed(2);
-      const balEl = document.getElementById('live-balance');
-      const statusEl = document.getElementById('live-status');
-      if (balance >= 0) {
-        balEl.textContent = '+¥' + balance.toFixed(2);
-        balEl.className = 'font-bold text-green-600';
-        statusEl.textContent = '盈利';
-        statusEl.className = 'mt-2 text-xs font-bold px-3 py-1 rounded-full bg-green-100 text-green-700';
-      } else {
-        balEl.textContent = '-¥' + Math.abs(balance).toFixed(2);
-        balEl.className = 'font-bold text-red-500';
-        statusEl.textContent = '亏损';
-        statusEl.className = 'mt-2 text-xs font-bold px-3 py-1 rounded-full bg-red-100 text-red-600';
+    // --- Auth ---
+    async function checkPasswordStatus() {
+      const res = await fetch('/api/password/status');
+      const data = await res.json();
+      if (!data.has_password) {
+        document.getElementById('auth-hint').textContent = '首次使用，请设置管理密码';
+        document.getElementById('auth-setup-fields').classList.remove('hidden');
+        document.getElementById('auth-login-fields').classList.add('hidden');
       }
     }
 
-    function loadFinance() {
-      fetch('/api/finance').then(r => r.json()).then(fin => {
-        document.getElementById('fin-income-input').value = fin.income;
-        document.getElementById('fin-expense-input').value = fin.expense;
-        liveCalc();
+    async function doSetup() {
+      const pw = document.getElementById('setup-password').value;
+      const confirm = document.getElementById('setup-confirm').value;
+      if (pw.length < 6) return toast('密码至少6位', 'error');
+      if (pw !== confirm) return toast('两次密码不一致', 'error');
+      const res = await fetch('/api/password/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pw })
       });
+      const data = await res.json();
+      if (data.ok) {
+        adminPassword = pw;
+        toast('密码设置成功');
+        showAdmin();
+      } else {
+        toast(data.error || '设置失败', 'error');
+      }
     }
 
-    function saveFinance() {
-      const income = parseFloat(document.getElementById('fin-income-input').value) || 0;
-      const expense = parseFloat(document.getElementById('fin-expense-input').value) || 0;
-      fetch('/api/finance', {
+    async function doLogin() {
+      const pw = document.getElementById('login-password').value;
+      if (!pw) return toast('请输入密码', 'error');
+      // Verify by trying to access a protected endpoint
+      const res = await fetch('/api/finance', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPwd },
-        body: JSON.stringify({ income, expense })
-      }).then(r => r.json()).then(fin => {
-        const msg = document.getElementById('fin-msg');
-        msg.classList.remove('hidden');
-        setTimeout(() => msg.classList.add('hidden'), 2000);
-        liveCalc();
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Password': pw },
+        body: JSON.stringify({})
       });
+      if (res.ok) {
+        adminPassword = pw;
+        toast('登录成功');
+        showAdmin();
+      } else {
+        toast('密码错误', 'error');
+      }
     }
 
+    function doLogout() {
+      adminPassword = '';
+      document.getElementById('admin-panel').classList.add('hidden');
+      document.getElementById('auth-screen').classList.remove('hidden');
+      document.getElementById('login-password').value = '';
+    }
 
-    function editSponsor(id, name, amount) {
-      const newName = prompt('修改名字（留空不改）:', name);
+    function showAdmin() {
+      document.getElementById('auth-screen').classList.add('hidden');
+      document.getElementById('admin-panel').classList.remove('hidden');
+      loadSponsors();
+      loadFinance();
+      loadSiteConfig();
+    }
+
+    // --- Tabs ---
+    function switchTab(name) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.getElementById('tab-' + name).classList.remove('hidden');
+      document.querySelectorAll('.tab-nav button').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+    }
+
+    // --- Sponsors ---
+    async function loadSponsors() {
+      const res = await fetch('/api/sponsors');
+      const list = await res.json();
+      document.getElementById('sp-count').textContent = list.length;
+      const container = document.getElementById('sponsor-list');
+      container.innerHTML = list.map(s => `
+        <div class="glass-light p-3 flex items-center justify-between">
+          <div>
+            <span class="font-bold">${escHtml(s.name)}</span>
+            <span class="text-amber-400 text-sm ml-2">¥${escHtml(s.amount)}</span>
+            ${s.date ? `<span class="text-white/40 text-xs ml-2">${escHtml(s.date)}</span>` : ''}
+          </div>
+          <div class="flex gap-2">
+            <button onclick="editSponsor('${s.id}','${escAttr(s.name)}','${escAttr(s.amount)}','${escAttr(s.date||'')}')" class="text-xs text-amber-400 hover:text-amber-300">编辑</button>
+            <button onclick="deleteSponsor('${s.id}')" class="text-xs text-red-400 hover:text-red-300">删除</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function addSponsor() {
+      const name = document.getElementById('sp-name').value.trim();
+      const amount = document.getElementById('sp-amount').value.trim();
+      const date = document.getElementById('sp-date').value.trim();
+      if (!name) return toast('请输入昵称', 'error');
+      const res = await fetch('/api/sponsors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPassword },
+        body: JSON.stringify({ name, amount, date })
+      });
+      if (res.ok) {
+        toast('添加成功');
+        document.getElementById('sp-name').value = '';
+        document.getElementById('sp-amount').value = '';
+        document.getElementById('sp-date').value = '';
+        loadSponsors();
+        loadFinance();
+      } else {
+        const data = await res.json();
+        toast(data.error || '添加失败', 'error');
+      }
+    }
+
+    function editSponsor(id, name, amount, date) {
+      const newName = prompt('昵称:', name);
       if (newName === null) return;
-      const newAmount = prompt('修改金额:', amount);
+      const newAmount = prompt('金额:', amount);
       if (newAmount === null) return;
-      const body = {};
-      if (newName.trim() && newName.trim() !== name) body.name = newName.trim();
-      if (newAmount.trim() !== amount) body.amount = newAmount.trim();
-      if (Object.keys(body).length === 0) return;
-      body.password = adminPwd;
-      fetch('/api/sponsors/' + id, {
+      const newDate = prompt('日期:', date);
+      if (newDate === null) return;
+      fetch(`/api/sponsors/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPwd },
-        body: JSON.stringify(body)
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPassword },
+        body: JSON.stringify({ name: newName, amount: newAmount, date: newDate })
       }).then(r => {
-        if (r.ok) {
-          loadSponsors();
-          loadFinance();
-        } else {
-          alert('修改失败');
-        }
+        if (r.ok) { toast('修改成功'); loadSponsors(); loadFinance(); }
+        else toast('修改失败', 'error');
       });
     }
 
+    async function deleteSponsor(id) {
+      if (!confirm('确定删除？')) return;
+      const res = await fetch(`/api/sponsors/${id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPassword },
+        body: JSON.stringify({})
+      });
+      if (res.ok) { toast('已删除'); loadSponsors(); loadFinance(); }
+      else toast('删除失败', 'error');
+    }
+
+    // --- Finance ---
+    async function loadFinance() {
+      const res = await fetch('/api/finance');
+      const fin = await res.json();
+      document.getElementById('fin-income').value = fin.income.toFixed(2);
+      document.getElementById('fin-expense').value = fin.expense.toFixed(2);
+      const bal = fin.balance;
+      const balEl = document.getElementById('fin-balance');
+      if (bal >= 0) {
+        balEl.textContent = `+¥${bal.toFixed(2)}`;
+        balEl.className = 'text-lg font-black text-green-400';
+      } else {
+        balEl.textContent = `-¥${Math.abs(bal).toFixed(2)}`;
+        balEl.className = 'text-lg font-black text-red-400';
+      }
+    }
+
+    async function saveFinance() {
+      const expense = parseFloat(document.getElementById('fin-expense').value) || 0;
+      const res = await fetch('/api/finance', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPassword },
+        body: JSON.stringify({ expense })
+      });
+      if (res.ok) { toast('保存成功'); loadFinance(); }
+      else toast('保存失败', 'error');
+    }
+
+    // --- QR Upload ---
+    async function uploadQR(type, input) {
+      const file = input.files[0];
+      if (!file) return;
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch(`/api/upload/qr/${type}`, {
+        method: 'POST',
+        headers: { 'X-Admin-Password': adminPassword },
+        body: formData
+      });
+      const data = await res.json();
+      if (data.ok) {
+        toast(`${type} 二维码已更新`);
+        document.getElementById(`preview-${type}`).src = data.path + '?t=' + Date.now();
+      } else {
+        toast(data.error || '上传失败', 'error');
+      }
+      input.value = '';
+    }
+
+    // --- Site Config ---
+    async function loadSiteConfig() {
+      const res = await fetch('/api/config');
+      const cfg = await res.json();
+      document.getElementById('cfg-title').value = cfg.title || '';
+      document.getElementById('cfg-subtitle').value = cfg.subtitle || '';
+      document.getElementById('cfg-description').value = cfg.description || '';
+      document.getElementById('cfg-footer').value = cfg.footer || '';
+      if (cfg.avatar) document.getElementById('cfg-avatar-preview').src = cfg.avatar;
+      if (cfg.background) document.getElementById('cfg-bg-preview').src = cfg.background;
+    }
+
+    async function saveSiteConfig() {
+      const body = {
+        title: document.getElementById('cfg-title').value,
+        subtitle: document.getElementById('cfg-subtitle').value,
+        description: document.getElementById('cfg-description').value,
+        footer: document.getElementById('cfg-footer').value
+      };
+      const res = await fetch('/api/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPassword },
+        body: JSON.stringify(body)
+      });
+      if (res.ok) toast('站点设置已保存');
+      else toast('保存失败', 'error');
+    }
+
+    async function uploadImage(type, input) {
+      const file = input.files[0];
+      if (!file) return;
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch(`/api/upload/image/${type}`, {
+        method: 'POST',
+        headers: { 'X-Admin-Password': adminPassword },
+        body: formData
+      });
+      const data = await res.json();
+      if (data.ok) {
+        toast(`${type === 'avatar' ? '头像' : '背景图'}已更新`);
+        if (type === 'avatar') document.getElementById('cfg-avatar-preview').src = data.path + '?t=' + Date.now();
+        else document.getElementById('cfg-bg-preview').src = data.path + '?t=' + Date.now();
+      } else {
+        toast(data.error || '上传失败', 'error');
+      }
+      input.value = '';
+    }
+
+    // --- Password ---
+    async function changePassword() {
+      const pw = document.getElementById('pw-new').value;
+      const confirm = document.getElementById('pw-confirm').value;
+      if (pw.length < 6) return toast('密码至少6位', 'error');
+      if (pw !== confirm) return toast('两次密码不一致', 'error');
+      const res = await fetch('/api/password/change', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPassword },
+        body: JSON.stringify({ new_password: pw })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        adminPassword = pw;
+        toast('密码已修改');
+        document.getElementById('pw-new').value = '';
+        document.getElementById('pw-confirm').value = '';
+      } else {
+        toast(data.error || '修改失败', 'error');
+      }
+    }
+
+    // --- Helpers ---
+    function escHtml(str) {
+      const d = document.createElement('div');
+      d.textContent = str || '';
+      return d.innerHTML;
+    }
+    function escAttr(str) {
+      return (str || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    }
+
+    // Init
+    checkPasswordStatus();
   </script>
 </body>
 </html>

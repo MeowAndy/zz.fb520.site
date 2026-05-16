@@ -27,9 +27,11 @@
       position: fixed;
       inset: 0;
       z-index: -1;
-      background: url('assets/bg-phoebe.jpg') center/cover no-repeat;
       filter: blur(20px) brightness(1.05) saturate(1.2);
       opacity: 0.25;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
     }
     .glass {
       background: rgba(255,255,255,0.75);
@@ -60,18 +62,18 @@
   </style>
 </head>
 <body class="text-slate-700 font-sans">
-  <div class="bg-phoebe"></div>
+  <div class="bg-phoebe" id="bg-layer"></div>
 
   <div class="min-h-screen flex flex-col items-center justify-center px-4 py-10">
     <!-- 头部 -->
     <div class="flex items-center gap-3 mb-2">
-      <img src="assets/phoebe-avatar.jpg" alt="菲比" class="w-14 h-14 rounded-full shadow-lg border-3 border-amber-200">
+      <img id="site-avatar" src="assets/phoebe-avatar.jpg" alt="菲比" class="w-14 h-14 rounded-full shadow-lg border-3 border-amber-200">
       <div>
-        <h1 class="text-2xl md:text-3xl font-black text-slate-800">赞助菲比 Bot</h1>
-        <p class="text-sm text-amber-500 font-bold">鸣潮免费分享机器人 · 公益运行</p>
+        <h1 id="site-title" class="text-2xl md:text-3xl font-black text-slate-800">赞助菲比 Bot</h1>
+        <p id="site-subtitle" class="text-sm text-amber-500 font-bold">鸣潮免费分享机器人 · 公益运行</p>
       </div>
     </div>
-    <p class="text-slate-500 text-sm mb-8 text-center max-w-md">菲比 Bot 一直坚持免费公益运行，如果你觉得菲比帮到了你，可以请菲比喝杯奶茶 ☕ 感谢每一位支持者的温暖~</p>
+    <p id="site-description" class="text-slate-500 text-sm mb-8 text-center max-w-md">菲比 Bot 一直坚持免费公益运行，如果你觉得菲比帮到了你，可以请菲比喝杯奶茶 ☕ 感谢每一位支持者的温暖~</p>
 
     <!-- 支付切换 -->
     <div class="flex gap-3 mb-6">
@@ -116,8 +118,6 @@
       </div>
     </div>
 
-
-
     <!-- 赞助名单 -->
     <div id="sponsor-section" class="glass p-6 md:p-8 max-w-md w-full mt-8 hidden">
       <h2 class="text-lg font-black text-slate-800 text-center mb-1">💛 感谢以下赞助者</h2>
@@ -125,9 +125,8 @@
       <div id="sponsor-list" class="space-y-2.5"></div>
     </div>
 
-    
     <!-- 底部 -->
-    <p class="mt-8 text-xs text-slate-400 text-center">菲比 Bot · 鸣潮免费分享机器人 · 感谢你的支持 💛</p>
+    <p id="site-footer" class="mt-8 text-xs text-slate-400 text-center">菲比 Bot · 鸣潮免费分享机器人 · 感谢你的支持 💛</p>
   </div>
 
   <script>
@@ -141,6 +140,19 @@
       event.target.classList.add('active');
       event.target.classList.remove('bg-white/60', 'border', 'border-amber-100');
     }
+
+    // Load site config dynamically
+    fetch('/api/config')
+      .then(r => r.json())
+      .then(cfg => {
+        if (cfg.title) document.getElementById('site-title').textContent = cfg.title;
+        if (cfg.subtitle) document.getElementById('site-subtitle').textContent = cfg.subtitle;
+        if (cfg.description) document.getElementById('site-description').textContent = cfg.description;
+        if (cfg.avatar) document.getElementById('site-avatar').src = cfg.avatar;
+        if (cfg.background) document.getElementById('bg-layer').style.backgroundImage = `url('${cfg.background}')`;
+        if (cfg.footer) document.getElementById('site-footer').textContent = cfg.footer;
+      })
+      .catch(() => {});
 
     // Load sponsor list
     fetch('/api/sponsors')
@@ -159,7 +171,7 @@
           return `
             <div class="sponsor-item${hiddenClass} flex items-center justify-between bg-white/60 rounded-xl px-4 py-3 border border-amber-100">
               <span class="font-bold text-slate-700">${safeName}</span>
-              ${safeAmount ? `<span class="text-amber-500 font-bold text-sm">${safeAmount}</span>` : ''}
+              ${safeAmount ? `<span class="text-amber-500 font-bold text-sm">¥${safeAmount}</span>` : ''}
             </div>
           `;
         }).join('');
@@ -172,7 +184,7 @@
         }
       })
       .catch(() => {});
-  
+
     // Load finance
     fetch('/api/finance')
       .then(r => r.json())

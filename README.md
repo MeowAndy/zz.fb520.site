@@ -1,93 +1,72 @@
-# 🧋 zz.fb520.site - 菲比 Bot 赞助页
+# zz.fb520.site - 赞助菲比 Bot 官网
 
-> 菲比 Bot 鸣潮免费分享机器人的赞助/投喂页面，公益运行，感谢每一位支持者 💛
+鸣潮免费分享机器人「菲比 Bot」的赞助页面。
 
-## ✨ 功能
+## 功能
 
-- 🎨 **赞助页面** — 展示微信/支付宝/QQ 收款码，支持一键切换
-- 📋 **赞助名单** — 自动展示所有赞助者（名字 + 金额），前 3 位默认展示，其余可展开
-- 📊 **运营概览** — 实时显示总收入、总支出、盈亏状态
-- 🔐 **管理后台** — 密码保护，支持：
-  - ➕ 添加赞助者
-  - ✏️ 编辑赞助者名字/金额
-  - 🗑️ 删除赞助者
-  - 💰 修改总支出（总收入自动从名单计算）
-  - 📊 实时预览盈亏变化
+- 💛 赞助者名单展示（自动统计收入）
+- 📊 运营财务概览（收入/支出/盈亏）
+- 💚💙💜 微信/支付宝/QQ 三种支付方式
+- 🔐 后台管理（密码保护，首次设置）
+- 📱 后台上传替换二维码图片
+- 🎨 后台编辑站点标题、描述、头像、背景
+- 🔑 密码哈希存储，代码可公开
 
-## 📁 文件结构
+## 技术栈
+
+- **前端**: HTML + Tailwind CSS + 原生 JS
+- **后端**: Flask + werkzeug.security
+- **部署**: systemd + OpenResty 反代
+
+## 目录结构
 
 ```
-├── index.html          # 赞助主页（前台展示）
-├── admin.html          # 管理后台（密码保护）
-├── app.py              # 后端 API 服务（Flask）
-├── assets/
-│   ├── phoebe-avatar.jpg   # 菲比头像
-│   ├── bg-phoebe.jpg       # 背景图
-│   ├── wechat.jpg          # 微信收款码
-│   ├── alipay.jpg          # 支付宝收款码
-│   └── qq.jpg              # QQ 收款码
-└── README.md
+├── app.py              # Flask API 后端（无明文密码）
+├── index.html          # 主页（动态加载配置）
+├── admin.html          # 后台管理面板
+├── assets/             # 静态资源（二维码、头像、背景）
+│   ├── wechat.jpg
+│   ├── alipay.jpg
+│   ├── qq.jpg
+│   ├── phoebe-avatar.jpg
+│   └── bg-phoebe.jpg
+└── data/               # 数据目录（不入仓库）
+    ├── sponsors.json
+    ├── finance.json
+    └── config.json
 ```
 
-## 🚀 部署说明
+## API 接口
 
-### 后端 API
+| 方法 | 路径 | 说明 | 需要认证 |
+|------|------|------|----------|
+| GET | /api/password/status | 检查是否已设密码 | ❌ |
+| POST | /api/password/setup | 首次设置密码 | ❌ |
+| POST | /api/password/change | 修改密码 | ✅ |
+| GET | /api/config | 获取站点配置 | ❌ |
+| PUT | /api/config | 更新站点配置 | ✅ |
+| GET | /api/sponsors | 获取赞助者列表 | ❌ |
+| POST | /api/sponsors | 添加赞助者 | ✅ |
+| PUT | /api/sponsors/:id | 编辑赞助者 | ✅ |
+| DELETE | /api/sponsors/:id | 删除赞助者 | ✅ |
+| GET | /api/finance | 获取财务数据 | ❌ |
+| PUT | /api/finance | 更新财务数据 | ✅ |
+| POST | /api/upload/qr/:type | 上传二维码 | ✅ |
+| POST | /api/upload/image/:type | 上传头像/背景 | ✅ |
+
+认证方式：请求头 `X-Admin-Password: <密码>`
+
+## 部署
 
 ```bash
-# 安装依赖
-pip install flask
+# 后端
+cp app.py /opt/zz-sponsor-api/app.py
+sudo systemctl restart zz-sponsor-api
 
-# 运行（建议用 systemd 托管）
-python app.py
-# 默认监听 127.0.0.1:5100
+# 前端
+cp index.html admin.html /opt/1panel/www/sites/zz.fb520.site/index/
 ```
 
-### 数据存储
-
-- 赞助名单：`data/sponsors.json`
-- 财务数据：`data/finance.json`
-
-### Nginx/OpenResty 反代
-
-将 `/api/` 路径反代到后端：
-
-```nginx
-location /api/ {
-    proxy_pass http://127.0.0.1:5100/api/;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-}
-```
-
-## 🔑 管理后台
-
-访问 `https://你的域名/admin.html`，输入管理密码即可进入。
-
-### API 接口
-
-| 方法 | 路径 | 说明 | 认证 |
-|------|------|------|------|
-| GET | `/api/sponsors` | 获取赞助列表 | 无 |
-| POST | `/api/sponsors` | 添加赞助者 | 需密码 |
-| PUT | `/api/sponsors/{id}` | 编辑赞助者 | 需密码 |
-| DELETE | `/api/sponsors/{id}` | 删除赞助者 | 需密码 |
-| GET | `/api/finance` | 获取财务数据 | 无 |
-| PUT | `/api/finance` | 更新支出 | 需密码 |
-
-认证方式：请求头 `X-Admin-Password` 或 JSON body 中的 `password` 字段。
-
-## 💡 特性
-
-- 总收入自动从赞助名单计算（添加/编辑/删除后自动重算）
-- 管理后台实时预览盈亏变化
-- 前台赞助名单超过 3 人自动折叠，用户可展开查看
-- 响应式设计，移动端友好
-- 毛玻璃 UI 风格，和菲比 Bot 官网统一
-
-## 📝 License
+## License
 
 MIT
-
----
-
-**菲比 Bot** · 鸣潮免费分享机器人 · 公益运行 💛
