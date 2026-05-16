@@ -67,6 +67,23 @@ sudo systemctl restart zz-sponsor-api
 cp index.html admin.html /opt/1panel/www/sites/zz.fb520.site/index/
 ```
 
+## 效果预览
+
+### 后台管理 - 赞助者列表
+![赞助者管理](screenshots/admin-sponsors.jpg)
+
+### 后台管理 - 财务概览
+![财务管理](screenshots/admin-finance.jpg)
+
+### 后台管理 - 二维码上传
+![二维码管理](screenshots/admin-qrcode.jpg)
+
+### 后台管理 - 站点设置
+![站点设置](screenshots/admin-settings.jpg)
+
+### 后台管理 - 密码修改
+![密码修改](screenshots/admin-password.jpg)
+
 ## License
 
 MIT
