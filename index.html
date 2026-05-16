@@ -3,17 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>赞助菲比 Bot｜鸣潮机器人</title>
-  <link rel="icon" type="image/jpeg" href="assets/phoebe-avatar.jpg">
+  <title>赞助页</title>
+  <link rel="icon" type="image/jpeg" href="assets/avatar.jpg">
   <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
       theme: {
         fontFamily: { sans: ['Quicksand', 'PingFang SC', 'Microsoft YaHei UI', 'sans-serif'] },
-        extend: {
-          colors: { gold: '#FFC107', tide: '#4FC3F7' }
-        }
+        extend: { colors: { gold: '#FFC107', tide: '#4FC3F7' } }
       }
     }
   </script>
@@ -23,15 +21,15 @@
       background-attachment: fixed;
       min-height: 100vh;
     }
-    .bg-phoebe {
+    .bg-hero {
       position: fixed;
       inset: 0;
       z-index: -1;
-      filter: blur(20px) brightness(1.05) saturate(1.2);
-      opacity: 0.25;
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
+      filter: blur(20px) brightness(1.05) saturate(1.2);
+      opacity: 0.25;
     }
     .glass {
       background: rgba(255,255,255,0.75);
@@ -62,44 +60,44 @@
   </style>
 </head>
 <body class="text-slate-700 font-sans">
-  <div class="bg-phoebe" id="bg-layer"></div>
+  <div id="bg-hero" class="bg-hero"></div>
 
   <div class="min-h-screen flex flex-col items-center justify-center px-4 py-10">
-    <!-- 头部 -->
+    <!-- Header -->
     <div class="flex items-center gap-3 mb-2">
-      <img id="site-avatar" src="assets/phoebe-avatar.jpg" alt="菲比" class="w-14 h-14 rounded-full shadow-lg border-3 border-amber-200">
+      <img id="site-avatar" src="assets/avatar.jpg" alt="Avatar" class="w-14 h-14 rounded-full shadow-lg border-3 border-amber-200">
       <div>
-        <h1 id="site-title" class="text-2xl md:text-3xl font-black text-slate-800">赞助菲比 Bot</h1>
-        <p id="site-subtitle" class="text-sm text-amber-500 font-bold">鸣潮免费分享机器人 · 公益运行</p>
+        <h1 id="site-title" class="text-2xl md:text-3xl font-black text-slate-800">赞助页</h1>
+        <p id="site-subtitle" class="text-sm text-amber-500 font-bold"></p>
       </div>
     </div>
-    <p id="site-description" class="text-slate-500 text-sm mb-8 text-center max-w-md">菲比 Bot 一直坚持免费公益运行，如果你觉得菲比帮到了你，可以请菲比喝杯奶茶 ☕ 感谢每一位支持者的温暖~</p>
+    <p id="site-description" class="text-slate-500 text-sm mb-8 text-center max-w-md"></p>
 
-    <!-- 支付切换 -->
+    <!-- Payment tabs -->
     <div class="flex gap-3 mb-6">
       <button class="tab-btn active px-5 py-2.5 rounded-full font-bold text-sm transition" onclick="showTab('wechat')">💚 微信</button>
       <button class="tab-btn px-5 py-2.5 rounded-full font-bold text-sm bg-white/60 border border-amber-100 transition" onclick="showTab('alipay')">💙 支付宝</button>
       <button class="tab-btn px-5 py-2.5 rounded-full font-bold text-sm bg-white/60 border border-amber-100 transition" onclick="showTab('qq')">💜 QQ</button>
     </div>
 
-    <!-- 二维码卡片 -->
+    <!-- QR cards -->
     <div class="glass qr-card p-6 md:p-8 max-w-sm w-full text-center">
       <div id="qr-wechat" class="qr-panel">
         <p class="text-lg font-black text-green-600 mb-4">微信支付</p>
-        <img src="assets/wechat.jpg" alt="微信支付二维码" class="w-full rounded-2xl shadow-md">
+        <img id="img-wechat" src="assets/wechat.jpg" alt="微信支付二维码" class="w-full rounded-2xl shadow-md">
       </div>
       <div id="qr-alipay" class="qr-panel hidden">
         <p class="text-lg font-black text-blue-600 mb-4">支付宝</p>
-        <img src="assets/alipay.jpg" alt="支付宝二维码" class="w-full rounded-2xl shadow-md">
+        <img id="img-alipay" src="assets/alipay.jpg" alt="支付宝二维码" class="w-full rounded-2xl shadow-md">
       </div>
       <div id="qr-qq" class="qr-panel hidden">
         <p class="text-lg font-black text-purple-600 mb-4">QQ 支付</p>
-        <img src="assets/qq.jpg" alt="QQ支付二维码" class="w-full rounded-2xl shadow-md">
+        <img id="img-qq" src="assets/qq.jpg" alt="QQ支付二维码" class="w-full rounded-2xl shadow-md">
       </div>
       <p class="mt-5 text-xs text-slate-400">长按或扫描二维码即可赞助 · 金额随意</p>
     </div>
 
-    <!-- 财务概览 -->
+    <!-- Finance overview -->
     <div id="finance-section" class="glass p-6 max-w-md w-full mt-6 hidden">
       <h2 class="text-lg font-black text-slate-800 text-center mb-4">📊 运营概览</h2>
       <div class="grid grid-cols-3 gap-3 text-center">
@@ -118,15 +116,15 @@
       </div>
     </div>
 
-    <!-- 赞助名单 -->
+    <!-- Sponsor list -->
     <div id="sponsor-section" class="glass p-6 md:p-8 max-w-md w-full mt-8 hidden">
       <h2 class="text-lg font-black text-slate-800 text-center mb-1">💛 感谢以下赞助者</h2>
-      <p class="text-xs text-slate-400 text-center mb-5">每一份支持都是菲比前进的动力</p>
+      <p class="text-xs text-slate-400 text-center mb-5">每一份支持都是前进的动力</p>
       <div id="sponsor-list" class="space-y-2.5"></div>
     </div>
 
-    <!-- 底部 -->
-    <p id="site-footer" class="mt-8 text-xs text-slate-400 text-center">菲比 Bot · 鸣潮免费分享机器人 · 感谢你的支持 💛</p>
+    <!-- Footer -->
+    <p id="site-footer" class="mt-8 text-xs text-slate-400 text-center">感谢你的支持 💛</p>
   </div>
 
   <script>
@@ -141,20 +139,45 @@
       event.target.classList.remove('bg-white/60', 'border', 'border-amber-100');
     }
 
-    // Load site config dynamically
+    function escHtml(str) {
+      const d = document.createElement('div');
+      d.textContent = str;
+      return d.innerHTML;
+    }
+
+    // Load site config
     fetch('/api/config')
       .then(r => r.json())
       .then(cfg => {
-        if (cfg.title) document.getElementById('site-title').textContent = cfg.title;
-        if (cfg.subtitle) document.getElementById('site-subtitle').textContent = cfg.subtitle;
-        if (cfg.description) document.getElementById('site-description').textContent = cfg.description;
-        if (cfg.avatar) document.getElementById('site-avatar').src = cfg.avatar;
-        if (cfg.background) document.getElementById('bg-layer').style.backgroundImage = `url('${cfg.background}')`;
-        if (cfg.footer) document.getElementById('site-footer').textContent = cfg.footer;
+        if (cfg.title) {
+          document.getElementById('site-title').textContent = cfg.title;
+          document.title = cfg.title;
+        }
+        if (cfg.subtitle) {
+          document.getElementById('site-subtitle').textContent = cfg.subtitle;
+        }
+        if (cfg.description) {
+          document.getElementById('site-description').textContent = cfg.description;
+        }
+        if (cfg.avatar) {
+          document.getElementById('site-avatar').src = cfg.avatar;
+          // Update favicon
+          const link = document.querySelector("link[rel='icon']");
+          if (link) link.href = cfg.avatar;
+        }
+        if (cfg.background) {
+          document.getElementById('bg-hero').style.backgroundImage = `url('${cfg.background}')`;
+        }
+        if (cfg.qr_wechat) document.getElementById('img-wechat').src = cfg.qr_wechat;
+        if (cfg.qr_alipay) document.getElementById('img-alipay').src = cfg.qr_alipay;
+        if (cfg.qr_qq) document.getElementById('img-qq').src = cfg.qr_qq;
+
+        // Update footer
+        document.getElementById('site-footer').textContent = (cfg.title || '赞助页') + ' · 感谢你的支持 💛';
       })
       .catch(() => {});
 
-    // Load sponsor list
+    // Load sponsors
     fetch('/api/sponsors')
       .then(r => r.json())
       .then(list => {
@@ -162,22 +185,17 @@
         document.getElementById('sponsor-section').classList.remove('hidden');
         const container = document.getElementById('sponsor-list');
         container.innerHTML = list.map((s, idx) => {
-          const d = document.createElement('div');
-          d.textContent = s.name;
-          const safeName = d.innerHTML;
-          d.textContent = s.amount || '';
-          const safeAmount = d.innerHTML;
           const hiddenClass = idx >= 3 ? ' sponsor-hidden hidden' : '';
           return `
             <div class="sponsor-item${hiddenClass} flex items-center justify-between bg-white/60 rounded-xl px-4 py-3 border border-amber-100">
-              <span class="font-bold text-slate-700">${safeName}</span>
-              ${safeAmount ? `<span class="text-amber-500 font-bold text-sm">¥${safeAmount}</span>` : ''}
+              <span class="font-bold text-slate-700">${escHtml(s.name)}</span>
+              ${s.amount ? `<span class="text-amber-500 font-bold text-sm">${escHtml(s.amount)}</span>` : ''}
             </div>
           `;
         }).join('');
         if (list.length > 3) {
           container.innerHTML += `
-            <button id="expand-sponsors-btn" onclick="document.querySelectorAll('.sponsor-hidden').forEach(el=>el.classList.remove('hidden'));this.remove();" class="w-full py-2.5 rounded-xl text-sm font-bold text-amber-500 bg-amber-50 border border-amber-200 hover:bg-amber-100 transition mt-2">
+            <button onclick="document.querySelectorAll('.sponsor-hidden').forEach(el=>el.classList.remove('hidden'));this.remove();" class="w-full py-2.5 rounded-xl text-sm font-bold text-amber-500 bg-amber-50 border border-amber-200 hover:bg-amber-100 transition mt-2">
               展开全部 (${list.length} 位赞助者)
             </button>
           `;

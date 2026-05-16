@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Sponsor list API for zz.fb520.site - v2 (no hardcoded passwords)"""
+"""
+Sponsor Page API - Generic deployable sponsor/donation page backend.
+No hardcoded passwords. First-time setup via /api/setup.
+"""
 import json
 import os
 import uuid
@@ -10,9 +13,12 @@ from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 
-DATA_DIR = "/opt/1panel/www/sites/zz.fb520.site/index/data"
-ASSETS_DIR = "/opt/1panel/www/sites/zz.fb520.site/index/assets"
-DATA_FILE = os.path.join(DATA_DIR, "sponsors.json")
+# Configurable directories - default to relative paths for easy deployment
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.environ.get("DATA_DIR", os.path.join(BASE_DIR, "data"))
+STATIC_DIR = os.environ.get("STATIC_DIR", os.path.join(BASE_DIR, "assets"))
+
+SPONSORS_FILE = os.path.join(DATA_DIR, "sponsors.json")
 FINANCE_FILE = os.path.join(DATA_DIR, "finance.json")
 CONFIG_FILE = os.path.join(DATA_DIR, "config.json")
 
@@ -20,55 +26,69 @@ ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
 MAX_UPLOAD_SIZE = 5 * 1024 * 1024  # 5MB
 
 
-# --- Config helpers ---
-def load_config():
-    if not os.path.exists(CONFIG_FILE):
-        return {}
-    with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+# --- Helpers ---
+
+def ensure_dirs():
+    os.makedirs(DATA_DIR, exist_ok=True)
+    os.makedirs(STATIC_DIR, exist_ok=True)
+
+
+def load_json(filepath, default=None):
+    if default is None:
+        default = {}
+    if not os.path.exists(filepath):
+        return default
+    with open(filepath, "r", encoding="utf-8") as f:
         return json.load(f)
 
 
-def save_config(cfg):
-    os.makedirs(DATA_DIR, exist_ok=True)
-    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-        json.dump(cfg, f, ensure_ascii=False, indent=2)
-
-
-# --- Sponsor helpers ---
-def load_sponsors():
-    if not os.path.exists(DATA_FILE):
-        return []
-    with open(DATA_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-
-def save_sponsors(sponsors):
-    os.makedirs(DATA_DIR, exist_ok=True)
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(sponsors, f, ensure_ascii=False, indent=2)
-
-
-# --- Finance helpers ---
-def load_finance():
-    if not os.path.exists(FINANCE_FILE):
-        return {"income": 0, "expense": 0}
-    with open(FINANCE_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-
-def save_finance(data):
-    os.makedirs(DATA_DIR, exist_ok=True)
-    with open(FINANCE_FILE, "w", encoding="utf-8") as f:
+def save_json(filepath, data):
+    ensure_dirs()
+    with open(filepath, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 
+def load_config():
+    return load_json(CONFIG_FILE, {})
+
+
+def save_config(cfg):
+    save_json(CONFIG_FILE, cfg)
+
+
+def load_sponsors():
+    return load_json(SPONSORS_FILE, [])
+
+
+def save_sponsors(sponsors):
+    save_json(SPONSORS_FILE, sponsors)
+
+
+def load_finance():
+    return load_json(FINANCE_FILE, {"income": 0, "expense": 0})
+
+
+def save_finance(data):
+    save_json(FINANCE_FILE, data)
+
+
+def is_setup_done():
+    cfg = load_config()
+    return "password_hash" in cfg and cfg["password_hash"]
+
+
+def allowed_file(filename):
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
 def recalc_income():
-    """Recalculate income from all sponsors - single source of truth."""
+    """Recalculate income from all sponsors."""
     sponsors = load_sponsors()
     total = 0
     for sp in sponsors:
         try:
-            total += float(sp.get("amount", "").replace("+", "").replace("¥", "").replace(",", ""))
+            amt = sp.get("amount", "").replace("+", "").replace("¥", "").replace(",", "")
+            total += float(amt)
         except (ValueError, TypeError):
             pass
     fin = load_finance()
@@ -78,185 +98,158 @@ def recalc_income():
 
 
 # --- Auth ---
+
 def require_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):
+        if not is_setup_done():
+            return jsonify({"error": "not_setup"}), 403
         cfg = load_config()
-        password_hash = cfg.get("password_hash", "")
-        if not password_hash:
-            return jsonify({"error": "password not set"}), 403
-
         password = request.headers.get("X-Admin-Password", "")
-        if not password and request.is_json:
-            password = request.json.get("password", "")
-
-        if not password or not check_password_hash(password_hash, password):
+        if not password:
+            # Try JSON body
+            try:
+                body = request.get_json(silent=True) or {}
+                password = body.get("password", "")
+            except Exception:
+                pass
+        if not check_password_hash(cfg["password_hash"], password):
             return jsonify({"error": "unauthorized"}), 401
         return f(*args, **kwargs)
     return decorated
 
 
-def allowed_file(filename):
-    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+# --- Setup ---
+
+@app.route("/api/setup", methods=["GET"])
+def setup_status():
+    """Check if initial setup is done."""
+    return jsonify({"setup_done": is_setup_done()})
 
 
-# --- Password management ---
-@app.route("/api/password/status", methods=["GET"])
-def password_status():
+@app.route("/api/setup", methods=["POST"])
+def do_setup():
+    """First-time password setup. Only works if no password is set."""
+    if is_setup_done():
+        return jsonify({"error": "already_setup"}), 400
+    data = request.get_json(silent=True) or {}
+    password = data.get("password", "").strip()
+    if not password or len(password) < 4:
+        return jsonify({"error": "password_too_short"}), 400
     cfg = load_config()
-    has_password = bool(cfg.get("password_hash", ""))
-    return jsonify({"has_password": has_password})
-
-
-@app.route("/api/password/setup", methods=["POST"])
-def setup_password():
-    """Set password for the first time (only works if no password is set)."""
-    cfg = load_config()
-    if cfg.get("password_hash", ""):
-        return jsonify({"error": "password already set, use change endpoint"}), 400
-    data = request.json
-    new_password = data.get("password", "").strip()
-    if len(new_password) < 6:
-        return jsonify({"error": "password must be at least 6 characters"}), 400
-    cfg["password_hash"] = generate_password_hash(new_password)
+    cfg["password_hash"] = generate_password_hash(password)
     save_config(cfg)
-    return jsonify({"ok": True, "message": "password set successfully"})
+    return jsonify({"ok": True, "message": "Password set successfully"})
 
 
-@app.route("/api/password/change", methods=["POST"])
-@require_auth
-def change_password():
-    """Change password (requires current password in X-Admin-Password header)."""
-    data = request.json
-    new_password = data.get("new_password", "").strip()
-    if len(new_password) < 6:
-        return jsonify({"error": "password must be at least 6 characters"}), 400
-    cfg = load_config()
-    cfg["password_hash"] = generate_password_hash(new_password)
-    save_config(cfg)
-    return jsonify({"ok": True, "message": "password changed successfully"})
+# --- Site Config (public read, auth write) ---
 
-
-# --- Site config (title, subtitle, description, avatar, background) ---
 @app.route("/api/config", methods=["GET"])
-def get_site_config():
+def get_config():
+    """Public endpoint: returns site display config (no password hash)."""
     cfg = load_config()
-    site = cfg.get("site", {})
-    return jsonify({
-        "title": site.get("title", "赞助菲比 Bot"),
-        "subtitle": site.get("subtitle", "鸣潮免费分享机器人 · 公益运行"),
-        "description": site.get("description", "菲比 Bot 一直坚持免费公益运行，如果你觉得菲比帮到了你，可以请菲比喝杯奶茶 ☕ 感谢每一位支持者的温暖~"),
-        "avatar": site.get("avatar", "assets/phoebe-avatar.jpg"),
-        "background": site.get("background", "assets/bg-phoebe.jpg"),
-        "footer": site.get("footer", "菲比 Bot · 鸣潮免费分享机器人 · 感谢你的支持 💛")
-    })
+    public_cfg = {
+        "title": cfg.get("title", "赞助页"),
+        "subtitle": cfg.get("subtitle", ""),
+        "description": cfg.get("description", ""),
+        "avatar": cfg.get("avatar", "assets/avatar.jpg"),
+        "background": cfg.get("background", "assets/bg.jpg"),
+        "qr_wechat": cfg.get("qr_wechat", "assets/wechat.jpg"),
+        "qr_alipay": cfg.get("qr_alipay", "assets/alipay.jpg"),
+        "qr_qq": cfg.get("qr_qq", "assets/qq.jpg"),
+        "setup_done": is_setup_done(),
+    }
+    return jsonify(public_cfg)
 
 
 @app.route("/api/config", methods=["PUT"])
 @require_auth
-def update_site_config():
-    data = request.json
+def update_config():
+    """Update site display config (title, subtitle, description)."""
+    data = request.get_json(silent=True) or {}
     cfg = load_config()
-    site = cfg.get("site", {})
-    for key in ["title", "subtitle", "description", "avatar", "background", "footer"]:
+    for key in ("title", "subtitle", "description"):
         if key in data:
-            site[key] = data[key].strip()
-    cfg["site"] = site
+            cfg[key] = data[key].strip()
     save_config(cfg)
-    return jsonify({"ok": True, "site": site})
+    return jsonify({"ok": True})
 
 
-# --- QR code upload ---
-@app.route("/api/upload/qr/<qr_type>", methods=["POST"])
+# --- File Upload ---
+
+@app.route("/api/upload", methods=["POST"])
 @require_auth
-def upload_qr(qr_type):
-    if qr_type not in ("wechat", "alipay", "qq"):
-        return jsonify({"error": "invalid qr type, must be wechat/alipay/qq"}), 400
+def upload_file():
+    """Upload image file. Query param 'type' = avatar|background|wechat|alipay|qq"""
+    upload_type = request.args.get("type", "")
+    valid_types = {"avatar", "background", "wechat", "alipay", "qq"}
+    if upload_type not in valid_types:
+        return jsonify({"error": f"Invalid type. Must be one of: {', '.join(valid_types)}"}), 400
 
     if "file" not in request.files:
-        return jsonify({"error": "no file uploaded"}), 400
+        return jsonify({"error": "No file provided"}), 400
 
     file = request.files["file"]
     if file.filename == "":
-        return jsonify({"error": "no file selected"}), 400
+        return jsonify({"error": "No file selected"}), 400
 
     if not allowed_file(file.filename):
-        return jsonify({"error": "file type not allowed"}), 400
+        return jsonify({"error": "File type not allowed"}), 400
 
-    # Read and check size
-    file_data = file.read()
-    if len(file_data) > MAX_UPLOAD_SIZE:
-        return jsonify({"error": "file too large (max 5MB)"}), 400
+    # Check file size
+    file.seek(0, 2)
+    size = file.tell()
+    file.seek(0)
+    if size > MAX_UPLOAD_SIZE:
+        return jsonify({"error": "File too large (max 5MB)"}), 400
 
+    # Determine filename
     ext = file.filename.rsplit(".", 1)[1].lower()
-    filename = f"{qr_type}.{ext}"
-    filepath = os.path.join(ASSETS_DIR, filename)
+    type_to_filename = {
+        "avatar": f"avatar.{ext}",
+        "background": f"bg.{ext}",
+        "wechat": f"wechat.{ext}",
+        "alipay": f"alipay.{ext}",
+        "qq": f"qq.{ext}",
+    }
+    filename = type_to_filename[upload_type]
+    filepath = os.path.join(STATIC_DIR, filename)
 
-    # Remove old file if extension differs
+    # Remove old files with different extensions
     for old_ext in ALLOWED_EXTENSIONS:
-        old_path = os.path.join(ASSETS_DIR, f"{qr_type}.{old_ext}")
-        if old_path != filepath and os.path.exists(old_path):
-            os.remove(old_path)
+        old_file = os.path.join(STATIC_DIR, type_to_filename[upload_type].rsplit(".", 1)[0] + "." + old_ext)
+        if old_file != filepath and os.path.exists(old_file):
+            os.remove(old_file)
 
-    with open(filepath, "wb") as f:
-        f.write(file_data)
+    file.save(filepath)
 
-    return jsonify({"ok": True, "path": f"assets/{filename}"})
-
-
-# --- General image upload (avatar, background) ---
-@app.route("/api/upload/image/<image_type>", methods=["POST"])
-@require_auth
-def upload_image(image_type):
-    if image_type not in ("avatar", "background"):
-        return jsonify({"error": "invalid image type"}), 400
-
-    if "file" not in request.files:
-        return jsonify({"error": "no file uploaded"}), 400
-
-    file = request.files["file"]
-    if file.filename == "":
-        return jsonify({"error": "no file selected"}), 400
-
-    if not allowed_file(file.filename):
-        return jsonify({"error": "file type not allowed"}), 400
-
-    file_data = file.read()
-    if len(file_data) > MAX_UPLOAD_SIZE:
-        return jsonify({"error": "file too large (max 5MB)"}), 400
-
-    ext = file.filename.rsplit(".", 1)[1].lower()
-    if image_type == "avatar":
-        filename = f"phoebe-avatar.{ext}"
-    else:
-        filename = f"bg-phoebe.{ext}"
-
-    filepath = os.path.join(ASSETS_DIR, filename)
-
-    with open(filepath, "wb") as f:
-        f.write(file_data)
-
-    # Update config
+    # Update config with new path
     cfg = load_config()
-    site = cfg.get("site", {})
-    site[image_type] = f"assets/{filename}"
-    cfg["site"] = site
+    relative_path = f"assets/{filename}"
+    type_to_config_key = {
+        "avatar": "avatar",
+        "background": "background",
+        "wechat": "qr_wechat",
+        "alipay": "qr_alipay",
+        "qq": "qr_qq",
+    }
+    cfg[type_to_config_key[upload_type]] = relative_path
     save_config(cfg)
 
-    return jsonify({"ok": True, "path": f"assets/{filename}"})
+    return jsonify({"ok": True, "path": relative_path})
 
 
-# --- Sponsors CRUD ---
+# --- Sponsors ---
+
 @app.route("/api/sponsors", methods=["GET"])
 def get_sponsors():
-    sponsors = load_sponsors()
-    return jsonify(sponsors)
+    return jsonify(load_sponsors())
 
 
 @app.route("/api/sponsors", methods=["POST"])
 @require_auth
 def add_sponsor():
-    data = request.json
+    data = request.get_json(silent=True) or {}
     name = data.get("name", "").strip()
     amount = data.get("amount", "").strip()
     if not name:
@@ -265,7 +258,7 @@ def add_sponsor():
         "id": str(uuid.uuid4())[:8],
         "name": name,
         "amount": amount,
-        "date": data.get("date", "")
+        "date": data.get("date", ""),
     }
     sponsors = load_sponsors()
     sponsors.append(sponsor)
@@ -277,7 +270,7 @@ def add_sponsor():
 @app.route("/api/sponsors/<sponsor_id>", methods=["PUT"])
 @require_auth
 def update_sponsor(sponsor_id):
-    data = request.json
+    data = request.get_json(silent=True) or {}
     sponsors = load_sponsors()
     for s in sponsors:
         if s["id"] == sponsor_id:
@@ -287,49 +280,88 @@ def update_sponsor(sponsor_id):
                 s["amount"] = data["amount"].strip()
             if "date" in data:
                 s["date"] = data["date"].strip()
-            break
-    else:
-        return jsonify({"error": "not found"}), 404
-    save_sponsors(sponsors)
-    recalc_income()
-    return jsonify(s)
+            save_sponsors(sponsors)
+            recalc_income()
+            return jsonify(s)
+    return jsonify({"error": "not found"}), 404
 
 
 @app.route("/api/sponsors/<sponsor_id>", methods=["DELETE"])
 @require_auth
 def delete_sponsor(sponsor_id):
     sponsors = load_sponsors()
-    sponsors = [s for s in sponsors if s["id"] != sponsor_id]
-    save_sponsors(sponsors)
+    new_sponsors = [s for s in sponsors if s["id"] != sponsor_id]
+    if len(new_sponsors) == len(sponsors):
+        return jsonify({"error": "not found"}), 404
+    save_sponsors(new_sponsors)
     recalc_income()
     return jsonify({"ok": True})
 
 
 # --- Finance ---
+
 @app.route("/api/finance", methods=["GET"])
 def get_finance():
     fin = load_finance()
     income = float(fin.get("income", 0))
     expense = float(fin.get("expense", 0))
     balance = round(income - expense, 2)
-    return jsonify({"income": income, "expense": expense, "balance": balance, "status": "盈利" if balance >= 0 else "亏损"})
+    return jsonify({
+        "income": income,
+        "expense": expense,
+        "balance": balance,
+        "status": "盈利" if balance >= 0 else "亏损",
+    })
 
 
 @app.route("/api/finance", methods=["PUT"])
 @require_auth
 def update_finance():
-    data = request.json
+    data = request.get_json(silent=True) or {}
     fin = load_finance()
-    if "income" in data:
-        fin["income"] = float(data["income"])
     if "expense" in data:
         fin["expense"] = float(data["expense"])
+    # Income is auto-calculated, but allow manual override
+    if "income" in data:
+        fin["income"] = float(data["income"])
     save_finance(fin)
     income = float(fin.get("income", 0))
     expense = float(fin.get("expense", 0))
     balance = round(income - expense, 2)
-    return jsonify({"income": income, "expense": expense, "balance": balance, "status": "盈利" if balance >= 0 else "亏损"})
+    return jsonify({
+        "income": income,
+        "expense": expense,
+        "balance": balance,
+        "status": "盈利" if balance >= 0 else "亏损",
+    })
+
+
+# --- Change Password ---
+
+@app.route("/api/change-password", methods=["POST"])
+@require_auth
+def change_password():
+    """Change admin password (requires current password in X-Admin-Password header)."""
+    data = request.get_json(silent=True) or {}
+    new_password = data.get("new_password", "").strip()
+    if not new_password or len(new_password) < 4:
+        return jsonify({"error": "new password too short"}), 400
+    cfg = load_config()
+    cfg["password_hash"] = generate_password_hash(new_password)
+    save_config(cfg)
+    return jsonify({"ok": True, "message": "Password changed"})
+
+
+# --- Static file serving (for development) ---
+
+@app.route("/assets/<path:filename>")
+def serve_assets(filename):
+    return send_from_directory(STATIC_DIR, filename)
 
 
 if __name__ == "__main__":
+    ensure_dirs()
+    print(f"Data dir: {DATA_DIR}")
+    print(f"Static dir: {STATIC_DIR}")
+    print(f"Setup done: {is_setup_done()}")
     app.run(host="127.0.0.1", port=5100)
