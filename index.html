@@ -50,6 +50,13 @@
       color: #fff;
       box-shadow: 0 4px 15px rgba(255,179,0,0.3);
     }
+    .sponsor-item {
+      animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
   </style>
 </head>
 <body class="text-slate-700 font-sans">
@@ -90,6 +97,13 @@
       <p class="mt-5 text-xs text-slate-400">长按或扫描二维码即可赞助 · 金额随意</p>
     </div>
 
+    <!-- 赞助名单 -->
+    <div id="sponsor-section" class="glass p-6 md:p-8 max-w-md w-full mt-8 hidden">
+      <h2 class="text-lg font-black text-slate-800 text-center mb-1">💛 感谢以下赞助者</h2>
+      <p class="text-xs text-slate-400 text-center mb-5">每一份支持都是菲比前进的动力</p>
+      <div id="sponsor-list" class="space-y-2.5"></div>
+    </div>
+
     <!-- 底部 -->
     <p class="mt-8 text-xs text-slate-400 text-center">菲比 Bot · 鸣潮免费分享机器人 · 感谢你的支持 💛</p>
   </div>
@@ -105,6 +119,29 @@
       event.target.classList.add('active');
       event.target.classList.remove('bg-white/60', 'border', 'border-amber-100');
     }
+
+    // Load sponsor list
+    fetch('/api/sponsors')
+      .then(r => r.json())
+      .then(list => {
+        if (!list.length) return;
+        document.getElementById('sponsor-section').classList.remove('hidden');
+        const container = document.getElementById('sponsor-list');
+        container.innerHTML = list.map(s => {
+          const d = document.createElement('div');
+          d.textContent = s.name;
+          const safeName = d.innerHTML;
+          d.textContent = s.amount || '';
+          const safeAmount = d.innerHTML;
+          return `
+            <div class="sponsor-item flex items-center justify-between bg-white/60 rounded-xl px-4 py-3 border border-amber-100">
+              <span class="font-bold text-slate-700">${safeName}</span>
+              ${safeAmount ? `<span class="text-amber-500 font-bold text-sm">${safeAmount}</span>` : ''}
+            </div>
+          `;
+        }).join('');
+      })
+      .catch(() => {});
   </script>
 </body>
 </html>
